@@ -20,6 +20,10 @@ import Graphics.UI.Threepenny.Core
     (#),
     (#+),
   )
+import System.Environment (getArgs)
+import System.IO
+    ( hSetBuffering, stdout, BufferMode(LineBuffering) )
+
 
 --import Data.List.Split (splitOn)
 
@@ -91,14 +95,32 @@ setup window = do
             pure compareButton,
             pure cleanButton
           ]
-          # set (UI.attr "style") "position: fixed; left: 30%; top : 5%;"
+      --    # set (UI.attr "style") "position: fixed; left: 30%; top : 5%;"
 
   _ <- getBody window #+ [gameBody]
 
   pure ()
 
 main :: IO ()
-main = startGUI defaultConfig setup
+main = do
+    hSetBuffering stdout LineBuffering
+    ls <- getArgs
+    case ls of 
+      [port] -> start (read port)
+      _ -> pure ()
+--  startGUI defaultConfig setup
+
+
+
+start :: Int -> IO ()
+start port = do
+  startGUI defaultConfig
+    { UI.jsPort = Just port
+    } setup
+
+
+
+
 
 data Environment = Environment
   { numberLs :: Int,
