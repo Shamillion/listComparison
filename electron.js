@@ -25,7 +25,7 @@ freeport((err, port) => {
   function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({
-      width: 800,
+      width: 470,
       height: 600,
       webPreferences: { nodeIntegration: true },
     });
@@ -79,3 +79,10 @@ freeport((err, port) => {
     }
   });
 });
+
+
+function processFiles(files) {
+  var file = files[0];
+  var reader = new FileReader();
+  return(readAsText(file));  
+}

@@ -1,4 +1,3 @@
-
 module Main where
 
 import Data.IORef (newIORef, readIORef, writeIORef)
@@ -11,7 +10,7 @@ import Graphics.UI.Threepenny.Core
     Window,
     column,
     defaultConfig,
-    get,
+    --  get,
     getBody,
     on,
     set,
@@ -22,8 +21,10 @@ import Graphics.UI.Threepenny.Core
   )
 import System.Environment (getArgs)
 import System.IO
-    ( hSetBuffering, stdout, BufferMode(LineBuffering) )
-
+  ( BufferMode (LineBuffering),
+    hSetBuffering,
+    stdout,
+  )
 
 --import Data.List.Split (splitOn)
 
@@ -38,28 +39,39 @@ setup window = do
   compareButton <- createButton "Compare"
   cleanButton <- createButton "Clean"
 
-  standartLabel <- createLabel
-  comparedLabel <- createLabel
+  -- standartLabel <- createLabel
+  -- comparedLabel <- createLabel
 
   countLabel <-
     UI.label # set UI.text "0"
       # set (UI.attr "style") "font-size: 30px;"
 
+  inputStandard <- inputFile "fileStandard"
+  inputCompared <- inputFile "fileCompared"
+
+  on UI.valueChange inputStandard $
+    const $ do
+      liftIO $ print "Hello"
+
   on UI.click getStandardButton $
     const $ do
-      ls <- words <$> get UI.value standartLabel
+      file <- UI.callFunction $ do UI.ffi "document.getElementById(\"fileStandard\").files[0].path"
+      ls <- liftIO $ words <$> readFile file
       env <- liftIO $ readIORef ref
-      liftIO $ writeIORef ref (env {standartList = ls}) >> print ls
-      mapM_ (# set UI.enabled False . pure) [standartLabel, getStandardButton]
+      liftIO $ writeIORef ref (env {standartList = ls}) >> print file >> print ls
+      mapM_ (# set UI.enabled False . pure) [inputStandard, getStandardButton]
+  -- x <-  UI.callFunction $ do UI.ffi "require('electron').dialog.showOpenDialog(mainWindow, { \
+  --                        \  properties: ['openFile', 'openDirectory'] })"
 
   on UI.click getListButton $
     const $ do
-      ls <- words <$> get UI.value comparedLabel
+      file <- UI.callFunction $ do UI.ffi "document.getElementById(\"fileCompared\").files[0].path"
+      ls <- liftIO $ words <$> readFile file
       env <- liftIO $ readIORef ref
       let num = numberLs env + 1
-      liftIO $ writeIORef ref (Environment num (standartList env) (ls : comparedLists env)) >> print ls
+      liftIO $ writeIORef ref (Environment num (standartList env) (ls : comparedLists env)) >> print file >> print ls
       _ <- pure countLabel # set UI.text (show num)
-      pure comparedLabel # set UI.value ""
+      pure inputCompared # set UI.value ""
 
   on UI.click compareButton $
     const $ do
@@ -67,35 +79,37 @@ setup window = do
       let standartLs = standartList env
           comparedLss = comparedLists env
           ls = reverse $ map (searchIdenticalElems standartLs) comparedLss
-      fileName' <- liftIO fileName
-      _ <- liftIO $ writingListsToFile fileName' ls 1
+      outputFileName' <- liftIO outputFileName
+      _ <- liftIO $ writingListsToFile outputFileName' ls 1
       _ <- pure compareButton # set UI.text "Done!"
-      mapM_ (# set UI.enabled False . pure) [standartLabel, getStandardButton, comparedLabel, getListButton, compareButton]
+      mapM_ (# set UI.enabled False . pure) [inputStandard, getStandardButton, inputCompared, getListButton, compareButton]
 
   on UI.click cleanButton $
     const $ do
       liftIO $ writeIORef ref environment
       _ <- pure compareButton # set UI.text "Compare"
       _ <- pure countLabel # set UI.text "0"
-      mapM_ (# set UI.enabled True . pure) [standartLabel, getStandardButton, comparedLabel, getListButton, compareButton]
-      mapM_ (# set UI.value "" . pure) [standartLabel, comparedLabel]
+      mapM_ (# set UI.enabled True . pure) [inputStandard, getStandardButton, inputCompared, getListButton, compareButton]
+      mapM_ (# set UI.value "" . pure) [inputStandard, inputCompared]
 
-  let rowComparedName =
+  let columnTop =
+        UI.column [name "Standart list", pure inputStandard, pure getStandardButton]
+          # set (UI.attr "style") "background-color: #FFD700; padding: 0 20px; "
+
+      rowComparedName =
         UI.row [name "Compared lists. Loaded", pure countLabel]
           # set (UI.attr "style") "display: flex; justify-content: center;"
 
-      gameBody =
-        column
-          [ name "Standart list",
-            pure standartLabel,
-            pure getStandardButton,
-            rowComparedName,
-            pure comparedLabel,
-            pure getListButton,
-            pure compareButton,
-            pure cleanButton
-          ]
-      --    # set (UI.attr "style") "position: fixed; left: 30%; top : 5%;"
+      columnMiddle =
+        UI.column [rowComparedName, pure inputCompared, pure getListButton]
+          # set (UI.attr "style") "background-color: #00CED1; padding: 0 20px; "
+
+      columnBottom =
+        UI.column [pure compareButton, pure cleanButton]
+          # set (UI.attr "style") "background-color: #9BC2F9; padding: 40px 20px 0; "
+
+      gameBody = column [columnTop, columnMiddle, columnBottom]
+  -- # set (UI.attr "style") "justify-content: center;"
 
   _ <- getBody window #+ [gameBody]
 
@@ -103,24 +117,21 @@ setup window = do
 
 main :: IO ()
 main = do
-    hSetBuffering stdout LineBuffering
-    ls <- getArgs
-    case ls of 
-      [port] -> start (read port)
-      _ -> pure ()
+  hSetBuffering stdout LineBuffering
+  ls <- getArgs
+  case ls of
+    [port] -> start (read port)
+    _ -> pure ()
+
 --  startGUI defaultConfig setup
-
-
 
 start :: Int -> IO ()
 start port = do
-  startGUI defaultConfig
-    { UI.jsPort = Just port
-    } setup
-
-
-
-
+  startGUI
+    defaultConfig
+      { UI.jsPort = Just port
+      }
+    setup
 
 data Environment = Environment
   { numberLs :: Int,
@@ -137,13 +148,16 @@ createButton buttonName =
     # set UI.text buttonName
     # set
       (UI.attr "style")
-      "text-align: center; font-size: 50px; min-height: 75px; width: 450px; \
-      \ margin-bottom: 50px;"
+      "text-align: center; font-size: 30px; min-height: 50px; width: 410px; \
+      \ margin-bottom: 30px;"
 
 createLabel :: UI Element
 createLabel =
   UI.input
     # set UI.value ""
+    # set
+      (UI.attr "placeholder")
+      "Choos file"
     # set
       (UI.attr "style")
       "text-align: center; font-size: 50px; \
@@ -159,10 +173,10 @@ name str =
     # set UI.text str
     # set
       (UI.attr "style")
-      "text-align: center; font-size: 30px; min-height: 75px; margin-bottom: -40px; margin-right: 10px;"
+      "text-align: center; font-size: 30px; margin-bottom: 20px; margin-right: 10px;"
 
-fileName :: IO String
-fileName = do
+outputFileName :: IO String
+outputFileName = do
   time <- map (\c -> if c == ' ' then '_' else c) . take 19 . show <$> getCurrentTime
   pure $ "result_" ++ time ++ ".txt"
 
@@ -171,3 +185,13 @@ writingListsToFile _ [] _ = pure ()
 writingListsToFile file (x : xs) count = do
   appendFile file $ show count ++ ". " ++ unwords x ++ "\n\n"
   writingListsToFile file xs $ count + 1
+
+inputFile :: String -> UI Element
+inputFile nameId =
+  UI.input
+    # set (UI.attr "type") "file"
+    # set (UI.attr "id") nameId
+    # set UI.value ""
+    # set
+      (UI.attr "style")
+      "text-align: center; font-size: 20px; min-height: 35px; "
