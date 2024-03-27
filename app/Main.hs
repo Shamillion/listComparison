@@ -1,11 +1,9 @@
 module Main where
 
 import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.Time (getCurrentTime)
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-  ( Element,
-    MonadIO (liftIO),
+  ( MonadIO (liftIO),
     UI,
     Window,
     column,
@@ -18,6 +16,17 @@ import Graphics.UI.Threepenny.Core
     title,
     (#),
     (#+),
+  )
+import Lib
+  ( Environment (Environment, comparedLists, numberLs, standartList),
+    createButton,
+    createLabel,
+    environment,
+    inputFile,
+    name,
+    outputFileName,
+    searchIdenticalElems,
+    writingListsToFile,
   )
 import System.Environment (getArgs)
 import System.IO
@@ -39,7 +48,7 @@ setup window = do
   compareButton <- createButton "Compare"
   cleanButton <- createButton "Clean"
 
-  -- standartLabel <- createLabel
+  display <- createLabel
   -- comparedLabel <- createLabel
 
   countLabel <-
@@ -49,9 +58,12 @@ setup window = do
   inputStandard <- inputFile "fileStandard"
   inputCompared <- inputFile "fileCompared"
 
-  on UI.valueChange inputStandard $
+  on UI.checkedChange inputStandard $
     const $ do
       liftIO $ print "Hello"
+      x <- UI.get UI.value inputStandard
+      t <- UI.get UI.text inputStandard
+      liftIO $ print x >> print t
 
   on UI.click getStandardButton $
     const $ do
@@ -93,7 +105,7 @@ setup window = do
       mapM_ (# set UI.value "" . pure) [inputStandard, inputCompared]
 
   let columnTop =
-        UI.column [name "Standart list", pure inputStandard, pure getStandardButton]
+        UI.column [pure display, name "Standart list", pure inputStandard, pure getStandardButton]
           # set (UI.attr "style") "background-color: #FFD700; padding: 0 20px; "
 
       rowComparedName =
@@ -132,66 +144,3 @@ start port = do
       { UI.jsPort = Just port
       }
     setup
-
-data Environment = Environment
-  { numberLs :: Int,
-    standartList :: [String],
-    comparedLists :: [[String]]
-  }
-
-environment :: Environment
-environment = Environment 0 [] []
-
-createButton :: String -> UI Element
-createButton buttonName =
-  UI.button
-    # set UI.text buttonName
-    # set
-      (UI.attr "style")
-      "text-align: center; font-size: 30px; min-height: 50px; width: 410px; \
-      \ margin-bottom: 30px;"
-
-createLabel :: UI Element
-createLabel =
-  UI.input
-    # set UI.value ""
-    # set
-      (UI.attr "placeholder")
-      "Choos file"
-    # set
-      (UI.attr "style")
-      "text-align: center; font-size: 50px; \
-      \ min-height: 75px; width: 450px; margin-bottom: 5px; \
-      \ background: #6cf07d;"
-
-searchIdenticalElems :: [String] -> [String] -> [String]
-searchIdenticalElems standart = filter (`elem` standart)
-
-name :: String -> UI Element
-name str =
-  UI.p
-    # set UI.text str
-    # set
-      (UI.attr "style")
-      "text-align: center; font-size: 30px; margin-bottom: 20px; margin-right: 10px;"
-
-outputFileName :: IO String
-outputFileName = do
-  time <- map (\c -> if c == ' ' then '_' else c) . take 19 . show <$> getCurrentTime
-  pure $ "result_" ++ time ++ ".txt"
-
-writingListsToFile :: FilePath -> [[String]] -> Int -> IO ()
-writingListsToFile _ [] _ = pure ()
-writingListsToFile file (x : xs) count = do
-  appendFile file $ show count ++ ". " ++ unwords x ++ "\n\n"
-  writingListsToFile file xs $ count + 1
-
-inputFile :: String -> UI Element
-inputFile nameId =
-  UI.input
-    # set (UI.attr "type") "file"
-    # set (UI.attr "id") nameId
-    # set UI.value ""
-    # set
-      (UI.attr "style")
-      "text-align: center; font-size: 20px; min-height: 35px; "
