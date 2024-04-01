@@ -20,7 +20,6 @@ import Graphics.UI.Threepenny.Core
 import Lib
   ( Environment (Environment, comparedLists, numberLs, standartList),
     createButton,
-    createLabel,
     environment,
     inputFile,
     name,
@@ -35,8 +34,6 @@ import System.IO
     stdout,
   )
 
---import Data.List.Split (splitOn)
-
 setup :: Window -> UI ()
 setup window = do
   _ <- return window # set title "Comparison of lists"
@@ -46,10 +43,13 @@ setup window = do
   getStandardButton <- createButton "Load standart"
   getListButton <- createButton "Load list"
   compareButton <- createButton "Compare"
-  cleanButton <- createButton "Clean"
-
-  display <- createLabel
-  -- comparedLabel <- createLabel
+  cleanButton <-
+    createButton "Clean"
+      # set UI.enabled True
+      # set
+        (UI.attr "style")
+        "text-align: center; font-size: 30px; min-height: 50px; width: 410px; \
+        \ margin-bottom: 30px; background: #f58c9b;"
 
   countLabel <-
     UI.label # set UI.text "0"
@@ -59,11 +59,7 @@ setup window = do
   inputCompared <- inputFile "fileCompared"
 
   on UI.checkedChange inputStandard $
-    const $ do
-      liftIO $ print "Hello"
-      x <- UI.get UI.value inputStandard
-      t <- UI.get UI.text inputStandard
-      liftIO $ print x >> print t
+    const $ pure getStandardButton # set UI.enabled True
 
   on UI.click getStandardButton $
     const $ do
@@ -71,9 +67,11 @@ setup window = do
       ls <- liftIO $ words <$> readFile file
       env <- liftIO $ readIORef ref
       liftIO $ writeIORef ref (env {standartList = ls}) >> print file >> print ls
+      _ <- pure inputCompared # set UI.enabled True
       mapM_ (# set UI.enabled False . pure) [inputStandard, getStandardButton]
-  -- x <-  UI.callFunction $ do UI.ffi "require('electron').dialog.showOpenDialog(mainWindow, { \
-  --                        \  properties: ['openFile', 'openDirectory'] })"
+
+  on UI.checkedChange inputCompared $
+    const $ pure getListButton # set UI.enabled True
 
   on UI.click getListButton $
     const $ do
@@ -83,7 +81,8 @@ setup window = do
       let num = numberLs env + 1
       liftIO $ writeIORef ref (Environment num (standartList env) (ls : comparedLists env)) >> print file >> print ls
       _ <- pure countLabel # set UI.text (show num)
-      pure inputCompared # set UI.value ""
+      _ <- pure inputCompared # set UI.value ""
+      pure compareButton # set UI.enabled True
 
   on UI.click compareButton $
     const $ do
@@ -94,18 +93,19 @@ setup window = do
       outputFileName' <- liftIO outputFileName
       _ <- liftIO $ writingListsToFile outputFileName' ls 1
       _ <- pure compareButton # set UI.text "Done!"
-      mapM_ (# set UI.enabled False . pure) [inputStandard, getStandardButton, inputCompared, getListButton, compareButton]
+      mapM_ (# set UI.enabled False . pure) [inputCompared, getListButton, compareButton]
 
   on UI.click cleanButton $
     const $ do
       liftIO $ writeIORef ref environment
       _ <- pure compareButton # set UI.text "Compare"
       _ <- pure countLabel # set UI.text "0"
-      mapM_ (# set UI.enabled True . pure) [inputStandard, getStandardButton, inputCompared, getListButton, compareButton]
+      _ <- pure inputStandard # set UI.enabled True
+      mapM_ (# set UI.enabled False . pure) [getStandardButton, inputCompared, getListButton, compareButton]
       mapM_ (# set UI.value "" . pure) [inputStandard, inputCompared]
 
   let columnTop =
-        UI.column [pure display, name "Standart list", pure inputStandard, pure getStandardButton]
+        UI.column [name "Standart list", pure inputStandard # set UI.enabled True, pure getStandardButton]
           # set (UI.attr "style") "background-color: #FFD700; padding: 0 20px; "
 
       rowComparedName =
@@ -121,7 +121,6 @@ setup window = do
           # set (UI.attr "style") "background-color: #9BC2F9; padding: 40px 20px 0; "
 
       gameBody = column [columnTop, columnMiddle, columnBottom]
-  -- # set (UI.attr "style") "justify-content: center;"
 
   _ <- getBody window #+ [gameBody]
 
@@ -134,8 +133,6 @@ main = do
   case ls of
     [port] -> start (read port)
     _ -> pure ()
-
---  startGUI defaultConfig setup
 
 start :: Int -> IO ()
 start port = do

@@ -24,6 +24,7 @@ createButton :: String -> UI Element
 createButton buttonName =
   UI.button
     # set UI.text buttonName
+    # set UI.enabled False
     # set
       (UI.attr "style")
       "text-align: center; font-size: 30px; min-height: 50px; width: 410px; \
@@ -69,16 +70,8 @@ inputFile nameId =
   UI.input
     # set (UI.attr "type") "file"
     # set (UI.attr "id") nameId
+    # set UI.enabled False
     # set UI.value ""
     # set
       (UI.attr "style")
       "text-align: center; font-size: 20px; min-height: 35px; "
-
-messages :: [String]
-messages = 
-  [ "Select the file with \n the reference list"
-  , "Load the selected file"
-  , "Select the file with \n the list to compare"
-  , "Click the Compare button \n or select another file"
-  , "The file with the comparison \n results has been generated"
-  ]

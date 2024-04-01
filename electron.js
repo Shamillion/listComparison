@@ -26,7 +26,7 @@ freeport((err, port) => {
     // Create the browser window.
     win = new BrowserWindow({
       width: 470,
-      height: 600,
+      height: 620,
       webPreferences: { nodeIntegration: true },
     });
 
