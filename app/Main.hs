@@ -63,10 +63,10 @@ setup window = do
 
   on UI.click getStandardButton $
     const $ do
-      file <- UI.callFunction $ do UI.ffi "document.getElementById(\"fileStandard\").files[0].path"
-      ls <- liftIO $ words <$> readFile file
+      fileName <- UI.callFunction $ do UI.ffi "document.getElementById(\"fileStandard\").files[0].path"
+      ls <- liftIO $ words <$> readFile fileName
       env <- liftIO $ readIORef ref
-      liftIO $ writeIORef ref (env {standartList = ls}) >> print file >> print ls
+      liftIO $ writeIORef ref (env {standartList = ls}) >> print fileName >> print ls
       _ <- pure inputCompared # set UI.enabled True
       mapM_ (# set UI.enabled False . pure) [inputStandard, getStandardButton]
 
@@ -75,11 +75,11 @@ setup window = do
 
   on UI.click getListButton $
     const $ do
-      file <- UI.callFunction $ do UI.ffi "document.getElementById(\"fileCompared\").files[0].path"
-      ls <- liftIO $ words <$> readFile file
+      fileName <- UI.callFunction $ do UI.ffi "document.getElementById(\"fileCompared\").files[0].path"
+      ls <- liftIO $ words <$> readFile fileName
       env <- liftIO $ readIORef ref
       let num = numberLs env + 1
-      liftIO $ writeIORef ref (Environment num (standartList env) (ls : comparedLists env)) >> print file >> print ls
+      liftIO $ writeIORef ref (Environment num (standartList env) ((fileName, ls) : comparedLists env)) >> print fileName >> print ls
       _ <- pure countLabel # set UI.text (show num)
       _ <- pure inputCompared # set UI.value ""
       pure compareButton # set UI.enabled True

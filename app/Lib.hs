@@ -14,7 +14,7 @@ import Graphics.UI.Threepenny.Core
 data Environment = Environment
   { numberLs :: Int,
     standartList :: [String],
-    comparedLists :: [[String]]
+    comparedLists :: [(String, [String])]
   }
 
 environment :: Environment
@@ -43,8 +43,8 @@ createLabel =
       \ min-height: 50px; width: 410px; margin: 5px; \
       \ background: #6cf07d;"
 
-searchIdenticalElems :: [String] -> [String] -> [String]
-searchIdenticalElems standart = filter (`elem` standart)
+searchIdenticalElems :: [String] -> (String, [String]) -> (String, [String])
+searchIdenticalElems standart = fmap (filter (`elem` standart))
 
 name :: String -> UI Element
 name str =
@@ -59,10 +59,10 @@ outputFileName = do
   time <- map (\c -> if c == ' ' then '_' else c) . take 19 . show <$> getCurrentTime
   pure $ "result_" ++ time ++ ".txt"
 
-writingListsToFile :: FilePath -> [[String]] -> Int -> IO ()
+writingListsToFile :: FilePath -> [(String, [String])] -> Int -> IO ()
 writingListsToFile _ [] _ = pure ()
 writingListsToFile file (x : xs) count = do
-  appendFile file $ show count ++ ". " ++ unwords x ++ "\n\n"
+  appendFile file $ show count ++ ". " ++ fst x ++ "\n" ++ unwords (snd x) ++ "\n\n"
   writingListsToFile file xs $ count + 1
 
 inputFile :: String -> UI Element
