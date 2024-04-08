@@ -13,12 +13,12 @@ import Graphics.UI.Threepenny.Core
 
 data Environment = Environment
   { numberLs :: Int,
-    standartList :: [String],
+    standartList :: (String, [String]),
     comparedLists :: [(String, [String])]
   }
 
 environment :: Environment
-environment = Environment 0 [] []
+environment = Environment 0 ("", []) []
 
 createButton :: String -> UI Element
 createButton buttonName =
@@ -59,11 +59,17 @@ outputFileName = do
   time <- map (\c -> if c == ' ' then '_' else c) . take 19 . show <$> getCurrentTime
   pure $ "result_" ++ time ++ ".txt"
 
-writingListsToFile :: FilePath -> [(String, [String])] -> Int -> IO ()
-writingListsToFile _ [] _ = pure ()
-writingListsToFile file (x : xs) count = do
+writingListsToFile :: FilePath -> Environment -> Int -> IO ()
+writingListsToFile file env count = do
+  let standartListFilename = fst $ standartList env
+  appendFile file $ "Standard list is from: " ++ standartListFilename ++ "\n\n"
+  writingComparedListsToFile file (comparedLists env) count
+
+writingComparedListsToFile :: FilePath -> [(String, [String])] -> Int -> IO ()
+writingComparedListsToFile _ [] _ = pure ()
+writingComparedListsToFile file (x : xs) count = do
   appendFile file $ show count ++ ". " ++ fst x ++ "\n" ++ unwords (snd x) ++ "\n\n"
-  writingListsToFile file xs $ count + 1
+  writingComparedListsToFile file xs $ count + 1
 
 inputFile :: String -> UI Element
 inputFile nameId =

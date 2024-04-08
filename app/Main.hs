@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad (zipWithM_)
 import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
@@ -8,7 +9,6 @@ import Graphics.UI.Threepenny.Core
     Window,
     column,
     defaultConfig,
-    --  get,
     getBody,
     on,
     set,
@@ -66,7 +66,8 @@ setup window = do
       fileName <- UI.callFunction $ do UI.ffi "document.getElementById(\"fileStandard\").files[0].path"
       ls <- liftIO $ words <$> readFile fileName
       env <- liftIO $ readIORef ref
-      liftIO $ writeIORef ref (env {standartList = ls}) >> print fileName >> print ls
+      liftIO $ writeIORef ref (env {standartList = (fileName, ls)}) >> print fileName >> print ls
+      _ <- pure getStandardButton # set UI.text "Done!"
       _ <- pure inputCompared # set UI.enabled True
       mapM_ (# set UI.enabled False . pure) [inputStandard, getStandardButton]
 
@@ -87,19 +88,20 @@ setup window = do
   on UI.click compareButton $
     const $ do
       env <- liftIO $ readIORef ref
-      let standartLs = standartList env
+      let standartLs = snd $ standartList env
           comparedLss = comparedLists env
           ls = reverse $ map (searchIdenticalElems standartLs) comparedLss
       outputFileName' <- liftIO outputFileName
-      _ <- liftIO $ writingListsToFile outputFileName' ls 1
-      _ <- pure compareButton # set UI.text "Done!"
+      _ <- liftIO $ writingListsToFile outputFileName' ((env {comparedLists = ls})) 1
+      mapM_ (# set UI.text "Done!" . pure) [getListButton, compareButton]
       mapM_ (# set UI.enabled False . pure) [inputCompared, getListButton, compareButton]
 
   on UI.click cleanButton $
     const $ do
       liftIO $ writeIORef ref environment
-      _ <- pure compareButton # set UI.text "Compare"
-      _ <- pure countLabel # set UI.text "0"
+      let elementLs = [getStandardButton, countLabel, getListButton, compareButton]
+          textLs = ["Load standart", "0", "Load list", "Compare"]
+      zipWithM_ (\el txt -> pure el # set UI.text txt) elementLs textLs
       _ <- pure inputStandard # set UI.enabled True
       mapM_ (# set UI.enabled False . pure) [getStandardButton, inputCompared, getListButton, compareButton]
       mapM_ (# set UI.value "" . pure) [inputStandard, inputCompared]
